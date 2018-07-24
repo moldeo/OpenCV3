@@ -2230,8 +2230,8 @@ if (m_pSrcTexture==NULL) {
 void
 moOpenCV::ThresholdFilter() {
  /**GET THE IMAGE: resized*/
-  //moVector2i resizer( m_reduce_width, m_reduce_height );
-  moVector2i resizer( 128, 128 );
+  moVector2i resizer( m_reduce_width, m_reduce_height );
+  //moVector2i resizer( 128, 128 );
   IplImage* srcframe = TextureToCvImage( m_pSrcTexture,  resizer  );
   if (srcframe==NULL) {
     MODebug2->Error("Error TextureToCvImage() : " + m_pSrcTexture->GetName() );
@@ -2265,7 +2265,7 @@ moOpenCV::ThresholdRecognition() {
 
 void
 moOpenCV::ContourRecognition(){
-
+  MODebug2->Message("Contour Regocgnition");
   ThresholdFilter();
 
   findContours( dstthresh, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
@@ -2300,11 +2300,12 @@ hierarchy[2] = contour 2
 */
     int idx = 0;
 
-
+    MODebug2->Message("Countours size:"+IntToStr(contours.size()));
 
     if (contours.size())
     for( ; idx >= 0; idx = hierarchy[idx][0] )
     {
+        MODebug2->Message("Countour: idx: "+IntToStr(idx)+moText(" size:")+IntToStr(contours[idx].size()));
         //if (contours[idx].size()>40) {
           minEnclosingCircle( (Mat)contours[idx], center[idx], radius[idx] );
 
@@ -2365,7 +2366,7 @@ hierarchy[2] = contour 2
               //Point dir = (center[idx]-pto);
 
               line( dstblobs, pfrom, pto, color, m_line_thickness  );
-              line( dstblobs, center[idx], pto, color, m_line_thickness  );
+              //line( dstblobs, center[idx], pto, color, m_line_thickness  );
               if (iv!=ivfirst) ivlast = iv;
               pfrom = pto;
             }

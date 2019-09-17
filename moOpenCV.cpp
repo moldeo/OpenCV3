@@ -39,7 +39,7 @@ moDefineDynamicArray( moOpenCVSystems )
 
   NOTAS:
 
-  el tracker podrá funcionar como un thread que vaya calculando en funcion de q va llegando la info,
+  el tracker podrÃ¡ funcionar como un thread que vaya calculando en funcion de q va llegando la info,
   o mejor aun, que trate de calcular, y cuando llega a un resultado el efecto en cuestion tome ese valor.
 
   //para que el tracker funcione sin shaders, debemos hacer el calculo antes de que se pase la informacion a la textura,
@@ -202,6 +202,7 @@ MOboolean moOpenCV::Init() {
   if (!moResource::Init()) return false;
 
   moDefineParamIndex( OPENCV_TEXTURE, "texture" );
+  moDefineParamIndex( OPENCV_TEXTURE2, "texture2" );
   moDefineParamIndex( OPENCV_COLOR, "color" );
   moDefineParamIndex( OPENCV_RECOGNITION_MODE, "recognition_mode" );
   moDefineParamIndex( OPENCV_REDUCE_WIDTH, moText("reduce_width") );
@@ -264,6 +265,7 @@ MOboolean moOpenCV::Init() {
     m_bReInit = true;
 
     m_pSrcTexture = NULL;
+    m_pSrc2Texture = NULL;
     m_pDest0Texture = NULL;
     m_pDest1Texture = NULL;
     m_pDest2Texture = NULL;
@@ -865,7 +867,7 @@ moOpenCV::MotionRecognition() {
                       //int b = pBuf[idx*4+2];
                       //int a = pBuf[idx*4+3];
                       if ( r > 0) {
-                          //crear el feature aquí....
+                          //crear el feature aquÃ­....
                           TF = new moTrackerFeature();
                           if (TF) {
                               TF->x = (float) i / (float)m_pTrackerSystemData->GetVideoFormat().m_Width;
@@ -1272,7 +1274,7 @@ moOpenCV::GpuMotionRecognition() {
                               //int b = pBuf[idx*4+2];
                               //int a = pBuf[idx*4+3];
                               if ( r > 0) {
-                                  //crear el feature aquí....
+                                  //crear el feature aquÃ­....
                                   TF = new moTrackerFeature();
                                   if (TF) {
                                       TF->x = (float) i / (float)m_pTrackerSystemData->GetVideoFormat().m_Width;
@@ -1906,7 +1908,8 @@ if (m_pSrcTexture==NULL) {
           names.push_back(trainname);
         }
       }
-      m_pFaceRecognizer = createEigenFaceRecognizer();
+      //m_pFaceRecognizer = createEigenFaceRecognizer();
+	  m_pFaceRecognizer =  EigenFaceRecognizer::create();
       if (m_pFaceRecognizer && images.size()>0)
         m_pFaceRecognizer->train(images, labels);
       //int predictedLabel = model->predict(testSample);
@@ -2265,39 +2268,38 @@ moOpenCV::ThresholdRecognition() {
 
 void
 moOpenCV::ContourRecognition(){
-  MODebug2->Message("Contour Regocgnition");
-  ThresholdFilter();
+    MODebug2->Message("Contour Regocgnition");
+    ThresholdFilter();
 
-  findContours( dstthresh, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
-  //dstthresh.release();
+    findContours( dstthresh, contours, hierarchy, CV_RETR_TREE, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
+    //dstthresh.release();
 
-  Mat dstblobs = Mat::zeros(dstthresh.rows, dstthresh.cols, CV_8UC3);
-//m_line_color = 2;
+    Mat dstblobs = Mat::zeros(dstthresh.rows, dstthresh.cols, CV_8UC3);
+    //m_line_color = 2;
+    /**
+    hierarchy[0] = contour 0
+    hierarchy[0][0] = previous contour same level
+    hierarchy[0][1] = next contour same level o -1
+    hierarchy[0][2] = child contour or -1
+    hierarchy[0][3] = parent contour or -1
 
-/**
-hierarchy[0] = contour 0
-hierarchy[0][0] = previous contour same level
-hierarchy[0][1] = next contour same level o -1
-hierarchy[0][2] = child contour or -1
-hierarchy[0][3] = parent contour or -1
-
-hierarchy[1] = contour 1
-hierarchy[2] = contour 2
-*/
+    hierarchy[1] = contour 1
+    hierarchy[2] = contour 2
+    */
 
     vector<vector<Point> > contours_poly( contours.size() );
     vector<Rect> boundRect( contours.size() );
     vector<Point2f>center( contours.size() );
     vector<float>radius( contours.size() );
 
-/*
-    for( int i = 0; i < contours.size(); i++ )
-     {
-       approxPolyDP( Mat(contours[i]), contours_poly[i], 3, true );
-       boundRect[i] = boundingRect( Mat(contours_poly[i]) );
-       minEnclosingCircle( (Mat)contours_poly[i], center[i], radius[i] );
-     }
-*/
+    /*
+        for( int i = 0; i < contours.size(); i++ )
+         {
+           approxPolyDP( Mat(contours[i]), contours_poly[i], 3, true );
+           boundRect[i] = boundingRect( Mat(contours_poly[i]) );
+           minEnclosingCircle( (Mat)contours_poly[i], center[i], radius[i] );
+         }
+    */
     int idx = 0;
 
     MODebug2->Message("Countours size:"+IntToStr(contours.size()));
@@ -2395,17 +2397,17 @@ hierarchy[2] = contour 2
         //}
         //fillPoly( dstblobs, contours, color );
     }
- //Scalar color( rand()&255, rand()&255, rand()&255 );
-  //fitEllipse( contours );
+    //Scalar color( rand()&255, rand()&255, rand()&255 );
+    //fitEllipse( contours );
 
-  //drawContours( dstblobs, contours, -1, color, /*CV_FILLED*/m_line_thickness, CV_AA, hierarchy );
-  //fillPoly( dstblobs, contours, color );
+    //drawContours( dstblobs, contours, -1, color, /*CV_FILLED*/m_line_thickness, CV_AA, hierarchy );
+    //fillPoly( dstblobs, contours, color );
 
-  //float area = contourArea( contours,  );
-  //approxPolyDP( contours,  );
-  CvMatToTexture( dstblobs, 0 , 0, 0, m_pCVBlobs );
-  //dstblobs.release();
-  dstthresh.release();
+    //float area = contourArea( contours,  );
+    //approxPolyDP( contours,  );
+    CvMatToTexture( dstblobs, 0 , 0, 0, m_pCVBlobs );
+    //dstblobs.release();
+    dstthresh.release();
 
 }
 
@@ -2694,7 +2696,129 @@ moOpenCV::ColorRecognition() {
 
 }
 
+void
+moOpenCV::DisparityMap() {
 
+}
+
+//    https://docs.opencv.org/3.1.0/d3/d14/tutorial_ximgproc_disparity_filtering.html
+// https://github.com/opencv/opencv_contrib/blob/master/modules/ximgproc/samples/disparity_filtering.cpp
+
+void
+moOpenCV::StereoRecognition() {
+
+
+    if (m_pSrcTexture==NULL) {
+
+        if (m_debug_on) MODebug2->Message("moOpenCV::StereoRecognition >> no src texture");
+
+        return;
+    }
+
+    moVector2i resizer( m_reduce_width, m_reduce_height );
+    IplImage* srcframe = TextureToCvImage( m_pSrcTexture,  resizer  );
+
+    if (srcframe==NULL) {
+      MODebug2->Error("Error TextureToCvImage() : " + m_pSrcTexture->GetName() );
+      return;
+    }
+
+
+
+    //Mat frame( srcframe );
+    Mat frame = cv::cvarrToMat(srcframe);
+
+    //Mat framecol;
+
+    CvMatToTexture( frame, 0 , 0, 0, m_pCVSourceTexture );
+
+    if (m_bReInit) {
+        if (m_debug_on) MODebug2->Message("MotionRecognition INIT");
+    }
+
+    string left;
+    string right;
+    int kernel_size = 0, number_of_disparities = 0, aggregation_window = 0, P1 = 0, P2 = 0;
+    float scale = 4;
+    int algo = STEREO_BINARY_BM;
+    int binary_descriptor_type = 0;
+    int success;
+
+    Mat image1, image2;
+    // we read  a pair of images from the disk
+    image1 = imread(left, CV_8UC1);
+    image2 = imread(right, CV_8UC1);
+    // verify if they are loaded correctly
+    if (image1.empty() || image2.empty())
+    {
+        cout << " --(!) Error reading images \n";
+        return 1;
+    }
+    // we display the parsed parameters
+    const char *b[7] = { "CV_DENSE_CENSUS", "CV_SPARSE_CENSUS", "CV_CS_CENSUS", "CV_MODIFIED_CS_CENSUS",
+        "CV_MODIFIED_CENSUS_TRANSFORM", "CV_MEAN_VARIATION", "CV_STAR_KERNEL" };
+    cout << "\nPath to left image " << left << " \n" << "Path to right image " << right << "\n";
+    cout << "\nkernel size " << kernel_size << "\n"
+        << "numberOfDisparities " << number_of_disparities << "\n"
+        << "aggregationWindow " << aggregation_window << "\n"
+        << "scallingFactor " << scale << "\n" << "Descriptor name : " << b[binary_descriptor_type] << "\n";
+
+    Mat imgDisparity16S2 = Mat(image1.rows, image1.cols, CV_16S);
+    Mat imgDisparity8U2 = Mat(image1.rows, image1.cols, CV_8UC1);
+    imshow("Original Left image", image1);
+
+    if (algo == STEREO_BINARY_BM)
+    {
+        Ptr<StereoBinaryBM> sbm = StereoBinaryBM::create(number_of_disparities, kernel_size);
+        // we set the corresponding parameters
+        sbm->setPreFilterCap(31);
+        sbm->setMinDisparity(0);
+        sbm->setTextureThreshold(10);
+        sbm->setUniquenessRatio(0);
+        sbm->setSpeckleWindowSize(400); // speckle size
+        sbm->setSpeckleRange(200);
+        sbm->setDisp12MaxDiff(0);
+        sbm->setScalleFactor((int)scale); // the scaling factor
+        sbm->setBinaryKernelType(binary_descriptor_type); // binary descriptor kernel
+        sbm->setAgregationWindowSize(aggregation_window);
+        // the user can choose between the average speckle removal algorithm or
+        // the classical version that was implemented in OpenCV
+        sbm->setSpekleRemovalTechnique(CV_SPECKLE_REMOVAL_AVG_ALGORITHM);
+        sbm->setUsePrefilter(false);
+        //-- calculate the disparity image
+        sbm->compute(image1, image2, imgDisparity8U2);
+        imshow("Disparity", imgDisparity8U2);
+    }
+    else if (algo == STEREO_BINARY_SGM)
+    {
+        // we set the corresponding parameters
+        Ptr<StereoBinarySGBM> sgbm = StereoBinarySGBM::create(0, number_of_disparities, kernel_size);
+        // setting the penalties for sgbm
+        sgbm->setP1(P1);
+        sgbm->setP2(P2);
+        sgbm->setMinDisparity(0);
+        sgbm->setUniquenessRatio(5);
+        sgbm->setSpeckleWindowSize(400);
+        sgbm->setSpeckleRange(0);
+        sgbm->setDisp12MaxDiff(1);
+        sgbm->setBinaryKernelType(binary_descriptor_type);
+        sgbm->setSpekleRemovalTechnique(CV_SPECKLE_REMOVAL_AVG_ALGORITHM);
+        sgbm->setSubPixelInterpolationMethod(CV_SIMETRICV_INTERPOLATION);
+        sgbm->compute(image1, image2, imgDisparity16S2);
+        /*Alternative for scalling
+        imgDisparity16S2.convertTo(imgDisparity8U2, CV_8UC1, scale);
+        */
+        double minVal; double maxVal;
+        minMaxLoc(imgDisparity16S2, &minVal, &maxVal);
+        imgDisparity16S2.convertTo(imgDisparity8U2, CV_8UC1, 255 / (maxVal - minVal));
+        //show the disparity image
+        imshow("Windowsgm", imgDisparity8U2);
+    }
+
+    cvReleaseImage(&srcframe);
+    frame.release();
+    m_bReInit = false;
+}
 
 MOswitch moOpenCV::SetStatus(MOdevcode devcode, MOswitch state) {
     return true;

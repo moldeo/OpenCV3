@@ -6,15 +6,15 @@
 # Date: 20170310
 # Version : 1.0
 # Usage: bash install.sh <directory in which you want the project to be installed>
-# NOTES: There are certain steps to be taken in the system before installing 
-#        via this script (refer to README): Run 
-#        `sudo gedit /etc/apt/sources.list` and change the line 
-#        `deb http://us.archive.ubuntu.com/ubuntu/ xenial main restricted` to 
+# NOTES: There are certain steps to be taken in the system before installing
+#        via this script (refer to README): Run
+#        `sudo gedit /etc/apt/sources.list` and change the line
+#        `deb http://us.archive.ubuntu.com/ubuntu/ xenial main restricted` to
 #        `deb http://us.archive.ubuntu.com/ubuntu/ xenial main universe`
 #==============================================================================
 
 # Exit script if any command fails
-set -e 
+set -e
 set -o pipefail
 
 if [ $# -ne 1 ]
@@ -43,26 +43,33 @@ echo "Essential dependencies installed."
 
 # OpenCV Dependency
 echo "Downloading OpenCV with contrib"
-if [ -d "opencv-3.1.0" ]; then
-  sudo rm -r "opencv-3.1.0"
+if [ -d "opencv" ]; then
+  sudo rm -r "opencv"
 fi
-if [ -d "opencv_contrib-3.1.0" ]; then
-  sudo rm -r "opencv_contrib-3.1.0"
+if [ -d "opencv_contrib" ]; then
+  sudo rm -r "opencv_contrib"
 fi
-wget https://github.com/Itseez/opencv/archive/3.1.0.zip
-unzip 3.1.0.zip
-rm 3.1.0.zip
-wget https://github.com/Itseez/opencv_contrib/archive/3.1.0.zip
-unzip 3.1.0.zip
-rm 3.1.0.zip
-cd opencv-3.1.0
+#wget https://github.com/Itseez/opencv/archive/3.1.0.zip
+#git clone https://github.com/opencv/opencv -b 3.4 --depth 1
+cvversion=3.4
+wget https://github.com/opencv/opencv/archive/${cvversion}.zip
+unzip 3.4.zip
+rm 3.4.zip
+mv opencv-${cvversion} opencv
+
+#wget https://github.com/Itseez/opencv_contrib/archive/3.1.0.zip
+#git clone https://github.com/opencv/opencv_contrib -b 3.4 --depth 1
+wget https://github.com/opencv/opencv_contrib/archive/${cvversion}.zip
+unzip ${cvversion}.zip
+rm ${cvversion}.zip
+mv opencv-contrib-${cvversion} opencv-contrib
+
+cd opencv
 mkdir build
 cd build
 echo "Installing OpenCV..."
-cmake -D CMAKE_BUILD_TYPE=RELEASE -DOPENCV_EXTRA_MODULES_PATH=../../opencv_contrib-3.1.0/modules -D CMAKE_INSTALL_PREFIX=/usr/local -D WITH_TBB=ON -D BUILD_SHARED_LIBS=OFF ..
+cmake -D CMAKE_BUILD_TYPE=RELEASE -DOPENCV_EXTRA_MODULES_PATH=../../opencv_contrib/modules -D CMAKE_INSTALL_PREFIX=/usr/local -D WITH_TBB=ON -D BUILD_SHARED_LIBS=OFF ..
 make -j4
 #sudo make install
 cd "../.."
 echo "OpenCV installed."
-
-

@@ -92,6 +92,9 @@
 #include "moTextureFilter.h"
 #include "moTextureFilterIndex.h"
 
+#include "opencv2/stereo.hpp"
+using namespace cv::stereo;
+enum { STEREO_BINARY_BM, STEREO_BINARY_SGM };
 
 /*
 #include "cvblob.h"
@@ -116,6 +119,7 @@ enum moOpenCVParamIndex {
     OPENCV_SCRIPT,
     OPENCV_COLOR,
     OPENCV_TEXTURE,
+    OPENCV_TEXTURE2,
     OPENCV_RECOGNITION_MODE,
     OPENCV_REDUCE_WIDTH,
     OPENCV_REDUCE_HEIGHT,
@@ -201,7 +205,6 @@ enum moOpenCVThresholdType {
   OPENCV_THRESHOLD_TYPE_MAX=4
 };
 
-#define w 500
 
 class moOpenCVSystem : public moAbstract {
 
@@ -225,7 +228,7 @@ moDeclareDynamicArray( IplImage*, moOpenCVImages );
 
 class moOpenCV : public moResource
 {
-public:
+  public:
     moOpenCV();
     virtual ~moOpenCV();
 
@@ -259,10 +262,13 @@ public:
     void ThresholdFilter();
     void ThresholdRecognition();
 
+    void StereoRecognition();
+    void DisparityMap();
+
     int detectMotion(const Mat & motion, Mat & result, Mat & result_cropped,
-                 int x_start, int x_stop, int y_start, int y_stop,
-                 int max_deviation,
-                 Scalar & color);
+               int x_start, int x_stop, int y_start, int y_stop,
+               int max_deviation,
+               Scalar & color);
 
 
     moConfigDefinition * GetDefinition( moConfigDefinition *p_configdefinition );
@@ -271,206 +277,207 @@ public:
     moDataMessage*          m_pDataMessage;
     moDataMessages          m_DataMessages;
 
-private:
+  private:
 
-    moTexture* m_pSrcTexture;
+      moTexture* m_pSrcTexture;
+      moTexture* m_pSrc2Texture;
 
-    bool      m_bReInit;
+      bool      m_bReInit;
 
-    moTexture* m_pCVSourceTexture;
-    moTexture* m_pCVResultTexture;
-    moTexture* m_pCVResult2Texture;
-    moTexture* m_pCVResult3Texture;
-    moTexture* m_pCVBlobs;
-    moTexture* m_pCVThresh;
+      moTexture* m_pCVSourceTexture;
+      moTexture* m_pCVResultTexture;
+      moTexture* m_pCVResult2Texture;
+      moTexture* m_pCVResult3Texture;
+      moTexture* m_pCVBlobs;
+      moTexture* m_pCVThresh;
 
-    moTexture* m_pDest0Texture; //very old texture
-    moTexture* m_pDest1Texture; //old texture
-    moTexture* m_pDest2Texture; //new texture
+      moTexture* m_pDest0Texture; //very old texture
+      moTexture* m_pDest1Texture; //old texture
+      moTexture* m_pDest2Texture; //new texture
 
-    moTexture* m_pDestDiff1Texture;//old difference
-    moTexture* m_pDestDiff2Texture;//new difference
+      moTexture* m_pDestDiff1Texture;//old difference
+      moTexture* m_pDestDiff2Texture;//new difference
 
-    moTextureFilter*    m_pTFDest0Texture;//very old texture filter (with shader)
-    moTextureFilter*    m_pTFDest1Texture;//old texture filter (with shader)
-    moTextureFilter*    m_pTFDest2Texture;//new texture filter (with shader)
+      moTextureFilter*    m_pTFDest0Texture;//very old texture filter (with shader)
+      moTextureFilter*    m_pTFDest1Texture;//old texture filter (with shader)
+      moTextureFilter*    m_pTFDest2Texture;//new texture filter (with shader)
 
-    moTextureFilter*    m_pTFDestDiff1Texture;//old texture filter shader
-    moTextureFilter*    m_pTFDestDiff2Texture;//new texture filter shader
+      moTextureFilter*    m_pTFDestDiff1Texture;//old texture filter shader
+      moTextureFilter*    m_pTFDestDiff2Texture;//new texture filter shader
 
-    moBucket* m_pBucketDiff1;
-    moBucket* m_pBucketDiff2;
+      moBucket* m_pBucketDiff1;
+      moBucket* m_pBucketDiff2;
 
-    float sumN;
-    float sumX, sumY;
+      float sumN;
+      float sumX, sumY;
 
-    int switch_texture;
+      int switch_texture;
 
-    moOpenCVRecognitionMode m_RecognitionMode;
+      moOpenCVRecognitionMode m_RecognitionMode;
 
-    moConfig config;
+      moConfig config;
 
-    moEventList *events;
+      moEventList *events;
 
-    IplImage* TextureToCvImage( moTexture* p_pTexture, moVector2i p_Resize = moVector2i( 0, 0  ) );
-    GLuint CvMatToTexture( Mat &mat, GLenum minFilter, GLenum magFilter, GLenum wrapFilter, moTexture* p_destTexture=NULL );
+      IplImage* TextureToCvImage( moTexture* p_pTexture, moVector2i p_Resize = moVector2i( 0, 0  ) );
+      GLuint CvMatToTexture( Mat &mat, GLenum minFilter, GLenum magFilter, GLenum wrapFilter, moTexture* p_destTexture=NULL );
 
-    CascadeClassifier body_cascade;
-    CascadeClassifier face_cascade;
-    CascadeClassifier eye_cascade;
-    HOGDescriptor hog_cascade;
+      CascadeClassifier body_cascade;
+      CascadeClassifier face_cascade;
+      CascadeClassifier eye_cascade;
+      HOGDescriptor hog_cascade;
 
-    moOutlet* m_MotionDetection; //0 o 1
-    moOutlet* m_MotionDetectionX; //0 o 1
-    moOutlet* m_MotionDetectionY;
+      moOutlet* m_MotionDetection; //0 o 1
+      moOutlet* m_MotionDetectionX; //0 o 1
+      moOutlet* m_MotionDetectionY;
 
-    moOutlet* m_FacePositionX;
-    moOutlet* m_FacePositionY;
-    moOutlet* m_FaceSizeWidth;
-    moOutlet* m_FaceSizeHeight;
+      moOutlet* m_FacePositionX;
+      moOutlet* m_FacePositionY;
+      moOutlet* m_FaceSizeWidth;
+      moOutlet* m_FaceSizeHeight;
 
-    moOutlet* m_EyeLeftX;
-    moOutlet* m_EyeLeftY;
-    moOutlet* m_EyeLeftWidth;
-    moOutlet* m_EyeLeftHeight;
+      moOutlet* m_EyeLeftX;
+      moOutlet* m_EyeLeftY;
+      moOutlet* m_EyeLeftWidth;
+      moOutlet* m_EyeLeftHeight;
 
-    moOutlet* m_EyeRightX;
-    moOutlet* m_EyeRightY;
-    moOutlet* m_EyeRightWidth;
-    moOutlet* m_EyeRightHeight;
+      moOutlet* m_EyeRightX;
+      moOutlet* m_EyeRightY;
+      moOutlet* m_EyeRightWidth;
+      moOutlet* m_EyeRightHeight;
 
-    moOutlet* m_OutTracker;
-    moOutlet* m_OutletDataMessage; //MESSAGE THAT CAN BE CONNECTED TO NetOscOut "DATAMESSAGE"
+      moOutlet* m_OutTracker;
+      moOutlet* m_OutletDataMessage; //MESSAGE THAT CAN BE CONNECTED TO NetOscOut "DATAMESSAGE"
 
-    moOutlet* m_Blob1X;
-    moOutlet* m_Blob1Y;
-    moOutlet* m_Blob1Size;
-    moOutlet* m_Blob1Vx;
-    moOutlet* m_Blob1Vy;
+      moOutlet* m_Blob1X;
+      moOutlet* m_Blob1Y;
+      moOutlet* m_Blob1Size;
+      moOutlet* m_Blob1Vx;
+      moOutlet* m_Blob1Vy;
 
-    moOutlet* m_Blob2X;
-    moOutlet* m_Blob2Y;
-    moOutlet* m_Blob2Size;
-    moOutlet* m_Blob2Vx;
-    moOutlet* m_Blob2Vy;
+      moOutlet* m_Blob2X;
+      moOutlet* m_Blob2Y;
+      moOutlet* m_Blob2Size;
+      moOutlet* m_Blob2Vx;
+      moOutlet* m_Blob2Vy;
 
-    moOutlet* m_Blob3X;
-    moOutlet* m_Blob3Y;
-    moOutlet* m_Blob3Size;
-    moOutlet* m_Blob3Vx;
-    moOutlet* m_Blob3Vy;
+      moOutlet* m_Blob3X;
+      moOutlet* m_Blob3Y;
+      moOutlet* m_Blob3Size;
+      moOutlet* m_Blob3Vx;
+      moOutlet* m_Blob3Vy;
 
-    moOutlet* m_Blob4X;
-    moOutlet* m_Blob4Y;
-    moOutlet* m_Blob4Size;
-    moOutlet* m_Blob4Vx;
-    moOutlet* m_Blob4Vy;
-
-
-    moInlet*  m_pContourIndex;
-    moInlet*  m_pLineIndex;
-    moInlet*  m_pBlobIndex;
-    moInlet*  m_pObjectIndex;
-    moInlet*  m_pFaceIndex;
-
-protected:
-    int m_steps;
-    int idopencvout;
-    int m_reduce_width;
-    int m_reduce_height;
-    int m_threshold;
-    int m_threshold_max;
-    double m_echo_result;
-    moOpenCVThresholdType m_threshold_type;
-
-    int m_debug_on;
-    std::vector<Rect> faces;
+      moOutlet* m_Blob4X;
+      moOutlet* m_Blob4Y;
+      moOutlet* m_Blob4Size;
+      moOutlet* m_Blob4Vx;
+      moOutlet* m_Blob4Vy;
 
 
-    float m_line_thickness;
-    float m_line_offset_x;
-    float m_line_offset_y;
-    moVector4d m_line_color;
-    float m_line_steps;
+      moInlet*  m_pContourIndex;
+      moInlet*  m_pLineIndex;
+      moInlet*  m_pBlobIndex;
+      moInlet*  m_pObjectIndex;
+      moInlet*  m_pFaceIndex;
 
-    float m_crop_min_x;
-    float m_crop_max_x;
-    float m_crop_min_y;
-    float m_crop_max_y;
-    int m_motion_pixels;
-    int m_motion_deviation;
+  protected:
+      int m_steps;
+      int idopencvout;
+      int m_reduce_width;
+      int m_reduce_height;
+      int m_threshold;
+      int m_threshold_max;
+      double m_echo_result;
+      moOpenCVThresholdType m_threshold_type;
 
-    float m_blob_min_area;
-    float m_blob_max_area;
-    float m_blob_min_distance;
-
-    IplImage* m_pIplImage;
-    MOubyte * m_pBuffer;
-    int       m_BufferSize;
-
-    /** MOTION DETECTION */
-    Mat current_frame;
-    Mat prev_frame;
-    Mat next_frame;
-    int number_of_changes, number_of_sequence;
-    /** END MOTION DETECTION */
-
-    /** THRESHOLD */
-    Mat dstthresh;
-    /** BLENDING */
-    Mat dstblending;
-
-    int levels;
-    //CvSeq* contours;
-    CvMemStorage* storage;
-
-    moOpenCVSystems		m_OpenCVSystems;
-
-    vector<Vec4i> hierarchy;
-    std::vector<std::vector<cv::Point> > contours;
-    std::vector<KeyPoint> keypoints;
+      int m_debug_on;
+      std::vector<Rect> faces;
 
 
-    Ptr<FaceRecognizer> m_pFaceRecognizer;
-    vector<Mat> images;
-    vector<int> labels;
-    vector<string> names;
-    bool isTrained;
+      float m_line_thickness;
+      float m_line_offset_x;
+      float m_line_offset_y;
+      moVector4d m_line_color;
+      float m_line_steps;
 
-    cv::Mat processImage(cv::Mat& image);
-    bool processAndSaveImage(cv::Mat& image, const std::string& name);
-    typedef std::map<std::string, std::string> StringMap;
+      float m_crop_min_x;
+      float m_crop_max_x;
+      float m_crop_min_y;
+      float m_crop_max_y;
+      int m_motion_pixels;
+      int m_motion_deviation;
+
+      float m_blob_min_area;
+      float m_blob_max_area;
+      float m_blob_min_distance;
+
+      IplImage* m_pIplImage;
+      MOubyte * m_pBuffer;
+      int       m_BufferSize;
+
+      /** MOTION DETECTION */
+      Mat current_frame;
+      Mat prev_frame;
+      Mat next_frame;
+      int number_of_changes, number_of_sequence;
+      /** END MOTION DETECTION */
+
+      /** THRESHOLD */
+      Mat dstthresh;
+      /** BLENDING */
+      Mat dstblending;
+
+      int levels;
+      //CvSeq* contours;
+      CvMemStorage* storage;
+
+      moOpenCVSystems		m_OpenCVSystems;
+
+      vector<Vec4i> hierarchy;
+      std::vector<std::vector<cv::Point> > contours;
+      std::vector<KeyPoint> keypoints;
 
 
-    moTimerAbsolute m_FaceTimer;
+      Ptr<FaceRecognizer> m_pFaceRecognizer;
+      vector<Mat> images;
+      vector<int> labels;
+      vector<string> names;
+      bool isTrained;
 
-    moText m_trainingImagesPath;
-    moText m_savingImagesPath;
-    int  m_savingImagesMode;
-    int  m_savingImagesSizeWidth;
-    int  m_savingImagesSizeHeight;
-    float m_savingImagesTime;
+      cv::Mat processImage(cv::Mat& image);
+      bool processAndSaveImage(cv::Mat& image, const std::string& name);
+      typedef std::map<std::string, std::string> StringMap;
 
-		cv::Size m_goalSize;
-		bool m_keepAspectRatio;
+
+      moTimerAbsolute m_FaceTimer;
+
+      moText m_trainingImagesPath;
+      moText m_savingImagesPath;
+      int  m_savingImagesMode;
+      int  m_savingImagesSizeWidth;
+      int  m_savingImagesSizeHeight;
+      float m_savingImagesTime;
+
+      cv::Size m_goalSize;
+      bool m_keepAspectRatio;
 
 };
 
 
 class moOpenCVFactory : public moResourceFactory {
 
-public:
-    moOpenCVFactory() {}
-    virtual ~moOpenCVFactory() {}
-    moResource* Create();
-    void Destroy(moResource* fx);
+  public:
+      moOpenCVFactory() {}
+      virtual ~moOpenCVFactory() {}
+      moResource* Create();
+      void Destroy(moResource* fx);
 };
 
 
 extern "C"
 {
-MO_PLG_API moResourceFactory* CreateResourceFactory();
-MO_PLG_API void DestroyResourceFactory();
+  MO_PLG_API moResourceFactory* CreateResourceFactory();
+  MO_PLG_API void DestroyResourceFactory();
 }
 
 

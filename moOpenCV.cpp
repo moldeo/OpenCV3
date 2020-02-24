@@ -2752,7 +2752,7 @@ moOpenCV::StereoRecognition() {
     if (image1.empty() || image2.empty())
     {
         cout << " --(!) Error reading images \n";
-        return 1;
+        return;
     }
     // we display the parsed parameters
     const char *b[7] = { "CV_DENSE_CENSUS", "CV_SPARSE_CENSUS", "CV_CS_CENSUS", "CV_MODIFIED_CS_CENSUS",
@@ -3557,8 +3557,9 @@ void moOpenCV::drawSquares( IplImage* cpy, CvSeq* squares ) {
         CV_READ_SEQ_ELEM( pt[2], reader );
         CV_READ_SEQ_ELEM( pt[3], reader );
 
+				CvScalar color = {0,255,0};
         // draw the square as a closed polyline
-        cvPolyLine( cpy, &rect, &count, 1, 1, CV_RGB(0,255,0), 3, CV_AA, 0 );
+        cvPolyLine( cpy, &rect, &count, 1, 1, color, 3, CV_AA, 0 );
     }
 
 }
